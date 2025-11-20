@@ -360,9 +360,54 @@ const translations = {
     }
 };
 
+// 檢測瀏覽器語言並返回對應的語言代碼
+function detectBrowserLanguage() {
+    // 獲取瀏覽器語言設置
+    const browserLang = navigator.language || navigator.userLanguage;
+    console.log('🌍 檢測到瀏覽器語言:', browserLang);
+    
+    // 根據瀏覽器語言匹配我們支持的語言
+    if (browserLang.startsWith('zh')) {
+        // 中文區域判斷
+        if (browserLang.includes('CN') || browserLang.includes('Hans')) {
+            console.log('✅ 自動選擇: 简体中文');
+            return 'zh-CN'; // 简体中文（中国大陆）
+        } else if (browserLang.includes('TW') || browserLang.includes('Hant') || browserLang.includes('HK') || browserLang.includes('MO')) {
+            console.log('✅ 自動選擇: 繁體中文');
+            return 'zh-TW'; // 繁体中文（台湾、香港、澳门）
+        } else {
+            // 默認簡體（因為使用簡體的人口更多）
+            console.log('✅ 自動選擇: 繁體中文（默認）');
+            return 'zh-TW';
+        }
+    } else if (browserLang.startsWith('en')) {
+        console.log('✅ 自動選擇: English');
+        return 'en'; // 英文
+    }
+    
+    // 其他語言默認使用繁體中文（因為這是主要目標市場）
+    console.log('✅ 自動選擇: 繁體中文（默認）');
+    return 'zh-TW';
+}
+
 // 獲取當前語言
 function getCurrentLanguage() {
-    return localStorage.getItem('language') || 'zh-TW';
+    // 先檢查是否有保存的語言偏好
+    const savedLang = localStorage.getItem('language');
+    
+    if (savedLang) {
+        console.log('📌 使用已保存的語言:', savedLang);
+        return savedLang;
+    }
+    
+    // 如果沒有保存的偏好，則自動檢測
+    const detectedLang = detectBrowserLanguage();
+    console.log('🔍 自動檢測語言:', detectedLang);
+    
+    // 保存檢測到的語言
+    localStorage.setItem('language', detectedLang);
+    
+    return detectedLang;
 }
 
 // 設置語言
@@ -370,6 +415,7 @@ function setLanguage(lang) {
     localStorage.setItem('language', lang);
     document.documentElement.lang = lang;
     updatePageLanguage(lang);
+    console.log('🌐 語言已切換為:', lang);
 }
 
 // 更新頁面語言
@@ -410,5 +456,11 @@ function initLanguage() {
     if (langSelect) {
         langSelect.value = currentLang;
     }
+    
+    // 在控制台顯示檢測結果（方便調試）
+    console.log('=== 🌍 語言檢測信息 ===');
+    console.log('瀏覽器語言:', navigator.language);
+    console.log('當前使用語言:', currentLang);
+    console.log('======================');
 }
 
