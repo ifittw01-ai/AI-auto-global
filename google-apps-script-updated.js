@@ -25,9 +25,68 @@ const DEFAULT_EMAIL = 'jordantsai777@gmail.com';  // 預設郵箱（找不到推
 const CACHE_DURATION = 600;  // 緩存時間（秒）- 10 分鐘
 
 // ========================================
+// 功能開關設定（從 Google Sheet 讀取）
+// ========================================
+const CONFIG_SHEET_NAME = '系統設定';  // 系統設定頁簽名稱
+
+// 默認配置（如果 Sheet 中沒有設定時使用）
+const DEFAULT_CONFIG = {
+  saveToSheet: true,              // 是否保存到 Google Sheet
+  sendPromoterEmail: true,        // 是否發送郵件給推廣人員
+  sendCustomerEmail: true,        // 是否發送確認郵件給客戶
+  enableCache: true,              // 是否啟用緩存
+  logDetails: true                // 是否記錄詳細日誌
+};
+
+// ========================================
+// 從 Google Sheet 讀取系統配置
+// ========================================
+function getSystemConfig() {
+  try {
+    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = spreadsheet.getSheetByName(CONFIG_SHEET_NAME);
+    
+    if (!sheet) {
+      Logger.log('⚠️ 找不到「' + CONFIG_SHEET_NAME + '」工作表，使用默認配置');
+      return DEFAULT_CONFIG;
+    }
+    
+    const data = sheet.getDataRange().getValues();
+    const config = {};
+    
+    // 從第二列開始讀取（第一列是標題：功能名稱 | 是否啟用）
+    for (let i = 1; i < data.length; i++) {
+      const key = String(data[i][0]).trim();
+      const value = String(data[i][1]).trim().toLowerCase();
+      
+      if (key) {
+        // 將 "是"、"yes"、"true"、"1" 視為 true
+        config[key] = (value === '是' || value === 'yes' || value === 'true' || value === '1');
+      }
+    }
+    
+    // 合併默認配置（如果 Sheet 中沒有某些設定）
+    const finalConfig = { ...DEFAULT_CONFIG, ...config };
+    
+    Logger.log('✅ 系統配置已載入:', JSON.stringify(finalConfig));
+    return finalConfig;
+    
+  } catch (error) {
+    Logger.log('❌ 讀取系統配置失敗: ' + error + '，使用默認配置');
+    return DEFAULT_CONFIG;
+  }
+}
+
+// ========================================
 // 從 Google Sheet 讀取郵箱映射表（含緩存）
 // ========================================
 function getEmailMapping() {
+  const config = getSystemConfig();
+  
+  // 如果禁用緩存，直接從 Sheet 讀取
+  if (!config.enableCache) {
+    return getEmailMappingFromSheet();
+  }
   try {
     // 1. 先嘗試從緩存讀取
     const cache = CacheService.getScriptCache();
@@ -39,6 +98,24 @@ function getEmailMapping() {
     }
     
     // 2. 緩存過期，從 Sheet 讀取
+    const mapping = getEmailMappingFromSheet();
+    
+    // 3. 存入緩存（10 分鐘）
+    cache.put('EMAIL_MAPPING', JSON.stringify(mapping), CACHE_DURATION);
+    
+    return mapping;
+    
+  } catch (error) {
+    Logger.log('❌ 讀取郵箱映射表失敗: ' + error);
+    return {};
+  }
+}
+
+// ========================================
+// 直接從 Sheet 讀取郵箱映射表（不使用緩存）
+// ========================================
+function getEmailMappingFromSheet() {
+  try {
     Logger.log('📊 從 Google Sheet 讀取郵箱映射表...');
     
     const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -63,10 +140,6 @@ function getEmailMapping() {
     }
     
     Logger.log('✅ 成功讀取 ' + Object.keys(mapping).length + ' 個推廣代碼');
-    
-    // 3. 存入緩存（10 分鐘）
-    cache.put('EMAIL_MAPPING', JSON.stringify(mapping), CACHE_DURATION);
-    
     return mapping;
     
   } catch (error) {
@@ -103,6 +176,12 @@ function clearCache() {
 // ========================================
 function doPost(e) {
   try {
+    // ========================================
+    // 1. 讀取系統配置
+    // ========================================
+    const config = getSystemConfig();
+    Logger.log('🔧 系統配置: ' + JSON.stringify(config));
+    
     // 解析表單數據
     const params = e.parameter;
     
@@ -121,23 +200,64 @@ function doPost(e) {
     const customerWhatsapp = params['WhatsApp號碼'] || params['WhatsApp'] || '未提供';
     const newsletter = params['訂閱電子報'] === 'on' ? '是' : '否';
     
-    Logger.log('📧 準備發送郵件...');
-    Logger.log('推廣代碼: ' + refCode);
-    Logger.log('目標郵箱: ' + targetEmail);
-    Logger.log('客戶姓名: ' + customerName);
-    Logger.log('客戶郵箱: ' + customerEmail);
-    Logger.log('客戶電話: ' + customerPhone);
-    Logger.log('國家地區: ' + customerCountry);
-    Logger.log('行業: ' + customerIndustry);
-    Logger.log('評估地區: ' + customerRegion);
-    Logger.log('LINE ID: ' + customerLineId);
-    Logger.log('WhatsApp: ' + customerWhatsapp);
+    // 根據配置決定是否記錄詳細日誌
+    if (config.logDetails) {
+      Logger.log('📧 準備處理表單提交...');
+      Logger.log('推廣代碼: ' + refCode);
+      Logger.log('目標郵箱: ' + targetEmail);
+      Logger.log('客戶姓名: ' + customerName);
+      Logger.log('客戶郵箱: ' + customerEmail);
+      Logger.log('客戶電話: ' + customerPhone);
+      Logger.log('國家地區: ' + customerCountry);
+      Logger.log('行業: ' + customerIndustry);
+      Logger.log('評估地區: ' + customerRegion);
+      Logger.log('LINE ID: ' + customerLineId);
+      Logger.log('WhatsApp: ' + customerWhatsapp);
+    }
     
     // ========================================
-    // 1. 發送通知郵件給推廣人員
+    // 2. 保存到 Google Sheet（如果啟用）
     // ========================================
-    const promoterSubject = `🎯 新客戶報名通知 - ${customerName}`;
-    const promoterBody = `
+    if (config.saveToSheet) {
+      try {
+        const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+        let dataSheet = spreadsheet.getSheetByName('Global');
+        
+        if (!dataSheet) {
+          dataSheet = spreadsheet.insertSheet('Global');
+          dataSheet.appendRow([
+            '時間戳記', '姓名', '電子郵件', '電話號碼', '國家地區', 
+            '行業', '評估地區', 'LINE ID', 'WhatsApp號碼', '推廣代碼'
+          ]);
+        }
+        
+        dataSheet.appendRow([
+          new Date(),
+          customerName,
+          customerEmail,
+          customerPhone,
+          customerCountry,
+          customerIndustry,
+          customerRegion,
+          customerLineId,
+          customerWhatsapp,
+          refCode
+        ]);
+        
+        Logger.log('✅ 數據已保存到 Google Sheet');
+      } catch (error) {
+        Logger.log('❌ 保存數據失敗: ' + error);
+      }
+    } else {
+      Logger.log('⚠️ 保存到 Sheet 功能已禁用');
+    }
+    
+    // ========================================
+    // 3. 發送通知郵件給推廣人員（如果啟用）
+    // ========================================
+    if (config.sendPromoterEmail) {
+      const promoterSubject = `🎯 新客戶報名通知 - ${customerName}`;
+      const promoterBody = `
 親愛的推廣夥伴，
 
 恭喜！您有一位新客戶報名了！
@@ -168,23 +288,26 @@ WhatsApp：${customerWhatsapp}
 ---
 AI+自媒體創業系統
 自動通知系統
-    `.trim();
-    
-    try {
-      MailApp.sendEmail({
-        to: targetEmail,
-        subject: promoterSubject,
-        body: promoterBody
-      });
-      Logger.log('✅ 已發送郵件給推廣人員: ' + targetEmail);
-    } catch (error) {
-      Logger.log('❌ 發送推廣人員郵件失敗: ' + error);
+      `.trim();
+      
+      try {
+        MailApp.sendEmail({
+          to: targetEmail,
+          subject: promoterSubject,
+          body: promoterBody
+        });
+        Logger.log('✅ 已發送郵件給推廣人員: ' + targetEmail);
+      } catch (error) {
+        Logger.log('❌ 發送推廣人員郵件失敗: ' + error);
+      }
+    } else {
+      Logger.log('⚠️ 推廣人員郵件通知已禁用');
     }
     
     // ========================================
-    // 2. 發送確認郵件給報名客戶
+    // 4. 發送確認郵件給報名客戶（如果啟用）
     // ========================================
-    if (customerEmail) {
+    if (config.sendCustomerEmail && customerEmail) {
       const customerSubject = `感謝您報名「AI+自媒體創業系統」`;
       
       // 準備地區信息顯示
@@ -218,6 +341,8 @@ AI+自媒體創業系統 團隊
       } catch (error) {
         Logger.log('❌ 發送客戶確認郵件失敗: ' + error);
       }
+    } else if (!config.sendCustomerEmail) {
+      Logger.log('⚠️ 客戶確認郵件已禁用');
     }
     
     // 返回成功響應
