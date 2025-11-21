@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配置向导 - AI-Global 部署助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .wizard-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .wizard-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .wizard-header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .wizard-header p {
+            opacity: 0.9;
+        }
+
+        .wizard-content {
+            padding: 40px;
+        }
+
+        .step {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .step-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-hint {
+            font-size: 0.9rem;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #555;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .code-output {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 20px 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            background: #2ecc71;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .copy-btn:hover {
+            background: #27ae60;
+        }
+
+        .copy-btn:active {
+            transform: scale(0.95);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            color: #1976d2;
+        }
+
+        .alert-warning {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            color: #f57c00;
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            color: #2e7d32;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+        }
+
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+
+        .checklist li {
+            padding: 10px;
+            margin-bottom: 5px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+        }
+
+        .checklist li:before {
+            content: "✅";
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="wizard-container">
+        <div class="wizard-header">
+            <h1>🚀 部署配置向导</h1>
+            <p>跟随步骤完成 AI-Global 系统的部署配置</p>
+        </div>
+
+        <div class="wizard-content">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 25%"></div>
+            </div>
+
+            <!-- 步骤 1: Google Sheet -->
+            <div class="step active" id="step1">
+                <h2 class="step-title">步骤 1/4: Google Sheet 配置</h2>
+                
+                <div class="alert alert-info">
+                    <strong>📋 需要准备的信息：</strong><br>
+                    • Google Sheet ID（从 Sheet 网址中获取）<br>
+                    • 默认邮箱地址
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Google Sheet ID *</label>
+                    <input type="text" class="form-input" id="spreadsheetId" 
+                           placeholder="例如: 1izx4MEi7coasKaULlqLQUDOmXt9qEmQ8GC0ZKfT2XvU"
+                           value="1izx4MEi7coasKaULlqLQUDOmXt9qEmQ8GC0ZKfT2XvU">
+                    <div class="form-hint">
+                        从 Google Sheet 网址中复制：https://docs.google.com/spreadsheets/d/<strong>这里就是ID</strong>/edit
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">默认邮箱 *</label>
+                    <input type="email" class="form-input" id="defaultEmail" 
+                           placeholder="your-email@gmail.com"
+                           value="jordantsai777@gmail.com">
+                    <div class="form-hint">当找不到推广代码时，表单会发送到这个邮箱</div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-secondary" disabled>上一步</button>
+                    <button class="btn btn-primary" onclick="nextStep(2)">下一步 →</button>
+                </div>
+            </div>
+
+            <!-- 步骤 2: Google Apps Script -->
+            <div class="step" id="step2">
+                <h2 class="step-title">步骤 2/4: Google Apps Script 配置</h2>
+                
+                <div class="alert alert-warning">
+                    <strong>⚠️ 重要：</strong><br>
+                    1. 在 Google Sheet 中打开：<strong>扩展功能 → Apps Script</strong><br>
+                    2. 复制下方生成的代码<br>
+                    3. 粘贴到 Apps Script 编辑器中<br>
+                    4. 保存并部署为"网页应用程序"
+                </div>
+
+                <div class="code-output" id="appsScriptCode">// 正在生成代码...</div>
+                
+                <button class="copy-btn" onclick="copyCode('appsScriptCode')">📋 复制 Apps Script 代码</button>
+
+                <div class="button-group">
+                    <button class="btn btn-secondary" onclick="prevStep(1)">← 上一步</button>
+                    <button class="btn btn-primary" onclick="nextStep(3)">下一步 →</button>
+                </div>
+            </div>
+
+            <!-- 步骤 3: 网站配置 -->
+            <div class="step" id="step3">
+                <h2 class="step-title">步骤 3/4: 网站配置</h2>
+                
+                <div class="alert alert-info">
+                    <strong>📝 请提供：</strong><br>
+                    Google Apps Script 部署后的网页应用程序 URL
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Google Apps Script URL *</label>
+                    <input type="text" class="form-input" id="scriptUrl" 
+                           placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+                           value="https://script.google.com/macros/s/AKfycbw0pq-8iRPIThxKibSEuRCV6i4I-xigvVv1ZxFVOJ93_st2jaxrda4-8kE8S4iaURuy/exec">
+                    <div class="form-hint">
+                        从 Apps Script 部署后获得的 URL（以 .../exec 结尾）
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-secondary" onclick="prevStep(2)">← 上一步</button>
+                    <button class="btn btn-primary" onclick="nextStep(4)">生成配置 →</button>
+                </div>
+            </div>
+
+            <!-- 步骤 4: 完成 -->
+            <div class="step" id="step4">
+                <h2 class="step-title">步骤 4/4: 完成配置</h2>
+                
+                <div class="alert alert-success">
+                    <strong>🎉 配置已生成！</strong><br>
+                    按照下方说明更新文件并部署到 GitHub Pages
+                </div>
+
+                <h3 style="margin: 20px 0 10px;">✅ 需要更新的文件：</h3>
+                <ul class="checklist">
+                    <li>google-apps-script-updated.js（已在步骤2复制）</li>
+                    <li>script.js（更新 GOOGLE_SCRIPT_URL）</li>
+                </ul>
+
+                <h3 style="margin: 20px 0 10px;">📝 script.js 配置代码：</h3>
+                <div class="code-output" id="scriptJsCode">// 正在生成代码...</div>
+                <button class="copy-btn" onclick="copyCode('scriptJsCode')">📋 复制 script.js 配置</button>
+
+                <h3 style="margin: 30px 0 10px;">🚀 部署命令：</h3>
+                <div class="code-output" id="deployCommands">git add .
+git commit -m "Update configuration for deployment"
+git push origin master</div>
+                <button class="copy-btn" onclick="copyCode('deployCommands')">📋 复制部署命令</button>
+
+                <div class="alert alert-info" style="margin-top: 30px;">
+                    <strong>💡 下一步：</strong><br>
+                    1. 更新 script.js 文件（第 326 行）<br>
+                    2. 运行上方的部署命令<br>
+                    3. 等待 1-3 分钟，访问：<br>
+                    <strong>https://ifittw01-ai.github.io/AI-auto-global/</strong>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-secondary" onclick="prevStep(3)">← 上一步</button>
+                    <button class="btn btn-primary" onclick="location.reload()">🔄 重新配置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        const totalSteps = 4;
+
+        function updateProgress() {
+            const progress = (currentStep / totalSteps) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        function nextStep(step) {
+            // 验证当前步骤
+            if (currentStep === 1) {
+                const spreadsheetId = document.getElementById('spreadsheetId').value.trim();
+                const defaultEmail = document.getElementById('defaultEmail').value.trim();
+                
+                if (!spreadsheetId || !defaultEmail) {
+                    alert('请填写所有必填项！');
+                    return;
+                }
+            }
+
+            if (currentStep === 2) {
+                generateAppsScriptCode();
+            }
+
+            if (currentStep === 3) {
+                const scriptUrl = document.getElementById('scriptUrl').value.trim();
+                if (!scriptUrl) {
+                    alert('请填写 Google Apps Script URL！');
+                    return;
+                }
+                generateFinalConfig();
+            }
+
+            // 切换步骤
+            document.getElementById('step' + currentStep).classList.remove('active');
+            currentStep = step;
+            document.getElementById('step' + currentStep).classList.add('active');
+            updateProgress();
+            
+            // 滚动到顶部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function prevStep(step) {
+            document.getElementById('step' + currentStep).classList.remove('active');
+            currentStep = step;
+            document.getElementById('step' + currentStep).classList.add('active');
+            updateProgress();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function generateAppsScriptCode() {
+            const spreadsheetId = document.getElementById('spreadsheetId').value.trim();
+            const defaultEmail = document.getElementById('defaultEmail').value.trim();
+            
+            const code = `// 配置更新提示：
+// 请将以下两行复制到 google-apps-script-updated.js 中：
+
+// 第 22 行：
+const SPREADSHEET_ID = '${spreadsheetId}';
+
+// 第 24 行：
+const DEFAULT_EMAIL = '${defaultEmail}';
+
+// 或者直接在 google-apps-script-updated.js 文件中手动修改这两行。`;
+            
+            document.getElementById('appsScriptCode').textContent = code;
+        }
+
+        function generateFinalConfig() {
+            const scriptUrl = document.getElementById('scriptUrl').value.trim();
+            
+            const scriptJsCode = `// 在 script.js 第 326 行，更新为：
+const GOOGLE_SCRIPT_URL = '${scriptUrl}';`;
+            
+            document.getElementById('scriptJsCode').textContent = scriptJsCode;
+        }
+
+        function copyCode(elementId) {
+            const codeElement = document.getElementById(elementId);
+            const text = codeElement.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ 已复制！';
+                btn.style.background = '#27ae60';
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '#2ecc71';
+                }, 2000);
+            }).catch(err => {
+                alert('复制失败，请手动复制代码');
+            });
+        }
+
+        // 页面加载时初始化
+        updateProgress();
+    </script>
+</body>
+</html>
+

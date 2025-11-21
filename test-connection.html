@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Apps Script 连接测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1rem;
+        }
+
+        .config-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .config-item {
+            margin-bottom: 15px;
+        }
+
+        .config-label {
+            font-weight: bold;
+            color: #555;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .config-value {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            word-break: break-all;
+        }
+
+        .test-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .test-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .test-btn:active {
+            transform: translateY(0);
+        }
+
+        .test-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-success {
+            border-left: 4px solid #2ecc71;
+        }
+
+        .result-error {
+            border-left: 4px solid #e74c3c;
+        }
+
+        .result-warning {
+            border-left: 4px solid #f39c12;
+        }
+
+        .result-title {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .result-content {
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-success {
+            background: #2ecc71;
+        }
+
+        .status-error {
+            background: #e74c3c;
+        }
+
+        .status-testing {
+            background: #f39c12;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .info-box-title {
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .info-box-content {
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .info-box-content li {
+            margin-left: 20px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Google Apps Script 连接测试</h1>
+        <p class="subtitle">测试您的 Google Apps Script 配置是否正确</p>
+
+        <div class="config-section">
+            <h3 style="margin-bottom: 15px; color: #333;">📋 当前配置</h3>
+            
+            <div class="config-item">
+                <label class="config-label">Google Apps Script URL:</label>
+                <div class="config-value" id="scriptUrl">加载中...</div>
+            </div>
+
+            <div class="config-item">
+                <label class="config-label">Spreadsheet ID:</label>
+                <div class="config-value" id="spreadsheetId">1izx4MEi7coasKaULlqLQUDOmXt9qEmQ8GC0ZKfT2XvU</div>
+            </div>
+        </div>
+
+        <div class="test-buttons">
+            <button class="test-btn" onclick="testConnection()">
+                🔗 测试连接
+            </button>
+            <button class="test-btn" onclick="testRegions('TW')">
+                🇹🇼 测试台湾地点
+            </button>
+            <button class="test-btn" onclick="testRegions('MY')">
+                🇲🇾 测试马来西亚地点
+            </button>
+            <button class="test-btn" onclick="testFormSubmit()">
+                📝 测试表单提交
+            </button>
+        </div>
+
+        <div id="result" class="result">
+            <div class="result-title" id="resultTitle">
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="resultTitleText"></span>
+            </div>
+            <div class="result-content" id="resultContent"></div>
+        </div>
+
+        <div class="info-box">
+            <div class="info-box-title">💡 使用说明</div>
+            <div class="info-box-content">
+                <ul>
+                    <li><strong>测试连接</strong>：检查 Google Apps Script 是否可访问</li>
+                    <li><strong>测试台湾地点</strong>：检查是否能正确获取台湾的评估地点</li>
+                    <li><strong>测试马来西亚地点</strong>：检查是否能正确获取马来西亚的评估地点</li>
+                    <li><strong>测试表单提交</strong>：模拟提交表单数据（测试数据）</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // 显示当前配置
+        document.getElementById('scriptUrl').textContent = GOOGLE_SCRIPT_URL || '未配置';
+
+        function showResult(type, title, content) {
+            const result = document.getElementById('result');
+            const resultTitle = document.getElementById('resultTitleText');
+            const resultContent = document.getElementById('resultContent');
+            const statusIndicator = document.getElementById('statusIndicator');
+
+            result.className = 'result show result-' + type;
+            resultTitle.textContent = title;
+            resultContent.textContent = content;
+            
+            statusIndicator.className = 'status-indicator';
+            if (type === 'success') {
+                statusIndicator.classList.add('status-success');
+            } else if (type === 'error') {
+                statusIndicator.classList.add('status-error');
+            } else {
+                statusIndicator.classList.add('status-testing');
+            }
+        }
+
+        async function testConnection() {
+            showResult('warning', '测试中...', '正在连接到 Google Apps Script...');
+            
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL);
+                const text = await response.text();
+                
+                if (response.ok) {
+                    showResult('success', '✅ 连接成功！', 
+                        `状态码: ${response.status}\n响应: ${text}`);
+                } else {
+                    showResult('error', '❌ 连接失败', 
+                        `状态码: ${response.status}\n响应: ${text}`);
+                }
+            } catch (error) {
+                showResult('error', '❌ 连接错误', 
+                    `错误信息: ${error.message}\n\n可能原因：\n1. Google Apps Script URL 配置错误\n2. 网络连接问题\n3. Apps Script 未正确部署`);
+            }
+        }
+
+        async function testRegions(country) {
+            const countryName = country === 'TW' ? '台湾' : '马来西亚';
+            showResult('warning', '测试中...', `正在获取${countryName}的评估地点...`);
+            
+            try {
+                const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getRegions&country=${country}`);
+                const result = await response.json();
+                
+                if (result.success && result.regions) {
+                    const regionList = result.regions.map((r, i) => 
+                        `${i + 1}. ${r.text} (ID: ${r.id})`
+                    ).join('\n');
+                    
+                    showResult('success', `✅ 获取${countryName}地点成功！`, 
+                        `找到 ${result.regions.length} 个地点：\n\n${regionList}`);
+                } else {
+                    showResult('error', `❌ 获取${countryName}地点失败`, 
+                        `响应: ${JSON.stringify(result, null, 2)}`);
+                }
+            } catch (error) {
+                showResult('error', '❌ 请求错误', 
+                    `错误信息: ${error.message}`);
+            }
+        }
+
+        async function testFormSubmit() {
+            showResult('warning', '测试中...', '正在提交测试数据...');
+            
+            const testData = new FormData();
+            testData.append('姓名', '测试用户');
+            testData.append('电子邮件', 'test@example.com');
+            testData.append('电话号码', '0912345678');
+            testData.append('国家地区', '台湾');
+            testData.append('行业', '教育 / 培训');
+            testData.append('评估地区', '测试地区');
+            testData.append('LINE_ID', 'test_line');
+            testData.append('WhatsApp号码', '0912345678');
+            testData.append('推广代码', '001');
+            testData.append('ref', '001');
+            
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    body: testData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult('success', '✅ 表单提交成功！', 
+                        `响应信息: ${result.message}\n目标邮箱: ${result.targetEmail || '未知'}\n\n请检查：\n1. Google Sheet 是否有新数据\n2. 推广人员是否收到邮件\n3. 测试邮箱是否收到确认邮件`);
+                } else {
+                    showResult('error', '❌ 表单提交失败', 
+                        `错误信息: ${result.message}\n\n完整响应:\n${JSON.stringify(result, null, 2)}`);
+                }
+            } catch (error) {
+                showResult('error', '❌ 提交错误', 
+                    `错误信息: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>
+
