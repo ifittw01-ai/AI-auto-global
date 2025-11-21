@@ -500,6 +500,13 @@ function updateSocialMediaImage(lang) {
     if (twitterImage) {
         twitterImage.setAttribute('content', imageUrl);
     }
+    
+    // 🖼️ 更新頁面上顯示的主圖片
+    const heroImage = document.querySelector('.hero-main-image');
+    if (heroImage) {
+        heroImage.src = 'data/' + imageName;
+        console.log('✅ 已更新頁面主圖片為:', imageName);
+    }
 }
 
 // 初始化語言
